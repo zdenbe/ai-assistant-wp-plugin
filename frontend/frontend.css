@@ -1,0 +1,56 @@
+#ekortn-chat-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+#ekortn-chat-output {
+    height: 200px;
+    overflow-y: auto;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #fff;
+}
+
+#ekortn-chat-output .ekortn-chat-response {
+    margin-bottom: 10px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    background-color: #eef;
+}
+
+#ekortn-chat-form textarea {
+    width: 100%;
+    height: 50px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+#ekortn-chat-form button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #0073aa;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+#ekortn-chat-form button:hover {
+    background-color: #005a87;
+}
+
+#ekortn-chat-output .ekortn-debug-info {
+    background-color: #f9f9f9;
+    border-left: 3px solid #0073aa;
+    padding: 5px;
+    margin: 10px 0;
+    font-family: monospace;
+    color: #555;
+}

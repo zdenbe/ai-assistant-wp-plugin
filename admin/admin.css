@@ -1,0 +1,129 @@
+/* Stylování pro administrační rozhraní pluginu */
+
+.wrap h1, .wrap h2, .wrap h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: bold;
+}
+
+.form-table th {
+    width: 200px;
+    text-align: left;
+    padding-right: 20px;
+}
+
+.form-table td {
+    padding: 10px 0;
+}
+
+textarea.large-text {
+    width: 100%;
+    height: 150px;
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.description {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.button-primary {
+    background-color: #0073aa;
+    border-color: #006799;
+    color: #fff;
+    text-decoration: none;
+}
+
+.button-primary:hover {
+    background-color: #005a87;
+    border-color: #004e70;
+}
+
+/* Stylování tabulky asistentů */
+.assistant-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+.assistant-table th {
+    background-color: #0073aa;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-weight: bold;
+    border-bottom: 2px solid #005a87;
+}
+
+.assistant-table td {
+    border-bottom: 1px solid #ddd;
+    padding: 15px;
+    vertical-align: top;
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+.assistant-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.assistant-table tr:hover {
+    background-color: #e9f3f8;
+}
+
+.assistant-table .action-buttons {
+    display: flex;
+    gap: 20px; /* Větší mezera mezi tlačítky */
+    justify-content: flex-end; /* Zarovnání tlačítek vpravo */
+}
+
+.assistant-table .button {
+    margin-right: 0;
+    padding: 5px 15px;
+    font-size: 14px;
+    background-color: #0073aa;
+    border-color: #006799;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 3px;
+    text-align: center;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.assistant-table .button:hover {
+    background-color: #005a87;
+    border-color: #004e70;
+    color: #fff; /* Zajištění, že text zůstane bílý při hoveru */
+}
+
+.assistant-table td:last-child {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Stylování tlačítek */
+.assistant-table .button {
+    margin-right: 0;
+    padding: 5px 15px;
+    font-size: 14px;
+    background-color: #0073aa;
+    border-color: #006799;
+    color: #fff; /* Původní barva textu */
+    text-decoration: none;
+    border-radius: 3px;
+    text-align: center;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.assistant-table .button:hover {
+    background-color: #005a87;
+    border-color: #004e70;
+    color: #ffffff !important; /* Barva textu zůstane bílá při hoveru */
+}
