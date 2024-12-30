@@ -1,4 +1,6 @@
 <?php
+// admin-settings.php
+
 // Registrace nastavení pluginu
 function ekortn_register_settings() {
     add_option('ekortn_openai_api_key', '');
@@ -20,6 +22,7 @@ add_action('admin_init', 'ekortn_register_settings');
 
 // Registrace stránky nastavení pluginu v administraci
 function ekortn_register_options_page() {
+    // Hlavní stránka
     add_options_page('Nastavení EkoRTN Assistenta', 'EkoRTN Assistant', 'manage_options', 'ekortn', 'ekortn_options_page');
 }
 add_action('admin_menu', 'ekortn_register_options_page');
@@ -31,11 +34,12 @@ function ekortn_options_page() {
         <h2>Nastavení EkoRTN Assistenta</h2>
         <form method="post" action="options.php">
             <?php settings_fields('ekortn_options_group'); ?>
-            <?php wp_nonce_field('ekortn_save_settings', 'ekortn_nonce'); // Přidání nonce ?>
+            <?php wp_nonce_field('ekortn_save_settings', 'ekortn_nonce'); ?>
             <table class="form-table">
                 <tr valign="top">
                     <th scope="row"><label for="ekortn_openai_api_key">API Klíč</label></th>
-                    <td><input type="text" id="ekortn_openai_api_key" name="ekortn_openai_api_key" value="<?php echo esc_attr(get_option('ekortn_openai_api_key')); ?>" class="regular-text" /></td>
+                    <td><input type="text" id="ekortn_openai_api_key" name="ekortn_openai_api_key" 
+                               value="<?php echo esc_attr(get_option('ekortn_openai_api_key')); ?>" class="regular-text" /></td>
                 </tr>
                 <tr valign="top">
                     <th scope="row"><label for="ekortn_default_assistant">Výchozí Asistent</label></th>
@@ -52,11 +56,13 @@ function ekortn_options_page() {
                 </tr>
                 <tr valign="top">
                     <th scope="row"><label for="ekortn_debug">Debug mód</label></th>
-                    <td><input type="checkbox" id="ekortn_debug" name="ekortn_debug" value="1" <?php checked(1, get_option('ekortn_debug'), true); ?> /></td>
+                    <td><input type="checkbox" id="ekortn_debug" name="ekortn_debug" 
+                               value="1" <?php checked(1, get_option('ekortn_debug'), true); ?> /></td>
                 </tr>
                 <tr valign="top">
                     <th scope="row"><label for="ekortn_token_limit">Limit Tokenů</label></th>
-                    <td><input type="number" id="ekortn_token_limit" name="ekortn_token_limit" value="<?php echo esc_attr(get_option('ekortn_token_limit')); ?>" class="regular-text" /></td>
+                    <td><input type="number" id="ekortn_token_limit" name="ekortn_token_limit" 
+                               value="<?php echo esc_attr(get_option('ekortn_token_limit')); ?>" class="regular-text" /></td>
                 </tr>
             </table>
 
@@ -105,9 +111,75 @@ function ekortn_options_page() {
                 </tr>
             </table>
             <p><button id="add-assistant" class="button button-primary">Přidat</button></p>
-            <input type="hidden" id="ekortn_assistants" name="ekortn_assistants" value='<?php echo esc_attr(get_option('ekortn_assistants', json_encode([]))); ?>'>
+            <input type="hidden" id="ekortn_assistants" name="ekortn_assistants" 
+                   value='<?php echo esc_attr(get_option('ekortn_assistants', json_encode([]))); ?>'>
             <?php submit_button(); ?>
         </form>
+    </div>
+    <?php
+}
+
+// ===========================================
+// Přidáme submenu pro "Zprávy konverzace"
+// ===========================================
+add_action('admin_menu', 'ekortn_register_messages_submenu');
+
+function ekortn_register_messages_submenu() {
+    // Rodičovská obrazovka je 'ekortn' (ze "Nastavení EkoRTN Assistenta")
+    add_submenu_page(
+        'ekortn',                      // parent slug
+        'Zprávy konverzace',           // page title
+        'Zprávy konverzace',           // menu title
+        'manage_options',              // capability
+        'ekortn_messages',             // menu slug
+        'ekortn_render_messages_page'  // callback
+    );
+}
+
+function ekortn_render_messages_page() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Nedostatečná oprávnění.');
+    }
+
+    global $wpdb;
+    $table_messages = $wpdb->prefix . 'ekortn_messages';
+
+    // Seznam všech uložených zpráv, seřazených od nejnovějších
+    $results = $wpdb->get_results("SELECT * FROM $table_messages ORDER BY created_at DESC");
+
+    ?>
+    <div class="wrap">
+        <h1>Zprávy konverzace</h1>
+        <p>Zde vidíte všechny zprávy uložené v tabulce <code><?php echo esc_html($table_messages); ?></code>.</p>
+
+        <table class="widefat fixed striped">
+            <thead>
+                <tr>
+                    <th width="5%">ID</th>
+                    <th width="15%">Thread ID</th>
+                    <th width="10%">User ID</th>
+                    <th width="10%">Role</th>
+                    <th width="50%">Content</th>
+                    <th width="10%">Vytvořeno</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if (!empty($results)): ?>
+                <?php foreach ($results as $row): ?>
+                    <tr>
+                        <td><?php echo esc_html($row->id); ?></td>
+                        <td><?php echo esc_html($row->thread_id); ?></td>
+                        <td><?php echo esc_html($row->user_id); ?></td>
+                        <td><?php echo esc_html($row->role); ?></td>
+                        <td><?php echo esc_html($row->content); ?></td>
+                        <td><?php echo esc_html($row->created_at); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr><td colspan="6">Zatím zde nejsou žádné zprávy.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
     </div>
     <?php
 }

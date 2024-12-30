@@ -1,14 +1,13 @@
 <?php
 /*
 Plugin Name: multi-ai-assistant-plugin
-Description: Plugin pro komunikaci s OpenAI API a zobrazení chatu na webových stránkách. Ukládá konverzace do DB a umožňuje zobrazení v administraci.
+Description: Plugin pro komunikaci s OpenAI API a zobrazení chatu na webových stránkách. Ukládá konverzace do DB.
 Version: 0.0.2
 Author: SmartLab@Evymo.com
 */
 
 define('EKORTN_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
-// Načtení ostatních souborů
 require_once(EKORTN_PLUGIN_DIR . 'includes/ajax-handler.php');
 require_once(EKORTN_PLUGIN_DIR . 'includes/process-query.php');
 require_once(EKORTN_PLUGIN_DIR . 'includes/logger.php');
@@ -43,14 +42,14 @@ function ekortn_register_assets() {
 add_action('wp_enqueue_scripts', 'ekortn_register_assets');
 add_action('admin_enqueue_scripts', 'ekortn_register_assets');
 
-// Aktivace pluginu (vytvoření tabulek)
+// Aktivace pluginu
 function ekortn_activate_plugin() {
     global $wpdb;
     $table_threads = $wpdb->prefix . 'ekortn_threads';
     $table_messages = $wpdb->prefix . 'ekortn_messages';
     $charset_collate = $wpdb->get_charset_collate();
 
-    // Tabulka pro mapování vlákna na usera
+    // 1) Tabulka pro mapování vlákna (thread_id) na usera
     $sql_threads = "CREATE TABLE IF NOT EXISTS $table_threads (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         thread_id VARCHAR(255) NOT NULL,
@@ -60,13 +59,13 @@ function ekortn_activate_plugin() {
         KEY thread_id (thread_id)
     ) $charset_collate;";
 
-    // Tabulka pro ukládání zpráv
+    // 2) Tabulka pro ukládání jednotlivých zpráv (konverzací)
     $sql_messages = "CREATE TABLE IF NOT EXISTS $table_messages (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         thread_id VARCHAR(255) NOT NULL,
         user_id BIGINT UNSIGNED NOT NULL,
-        role VARCHAR(50) NOT NULL,
-        content LONGTEXT NOT NULL,
+        role VARCHAR(50) NOT NULL,          /* user / assistant / system apod. */
+        content LONGTEXT NOT NULL,          /* samotný text zprávy */
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         KEY thread_id (thread_id)
@@ -80,8 +79,10 @@ register_activation_hook(__FILE__, 'ekortn_activate_plugin');
 
 // Deaktivace pluginu
 function ekortn_deactivate_plugin() {
-    // Pokud byste chtěl tabulky smazat, můžete to udělat zde, ale
-    // pozor na ztrátu dat.
+    // Pokud byste chtěl tabulky odstranit:
+    // global $wpdb;
+    // $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}ekortn_threads");
+    // $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}ekortn_messages");
 }
 register_deactivation_hook(__FILE__, 'ekortn_deactivate_plugin');
 
