@@ -18,7 +18,7 @@ document.getElementById('ekortn-chat-form').addEventListener('submit', function(
     }
 
     let currentNonce = '<?php echo wp_create_nonce('ekortn_frontend_nonce'); ?>';
-    
+
     // Přidání nonce do těla požadavku
     fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
         method: 'POST',
@@ -26,12 +26,12 @@ document.getElementById('ekortn-chat-form').addEventListener('submit', function(
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: 'action=ekortn_process_chat_message&message=' + encodeURIComponent(query) +
-              '&nonce=' + encodeURIComponent(currentNonce) // Přidání nonce
+              '&nonce=' + encodeURIComponent(currentNonce) 
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Aktualizace nonce pro následné požadavky
+            // Aktualizace nonce
             currentNonce = data.new_nonce || currentNonce;
 
             // Zobrazení zprávy uživatele v chatu
@@ -74,7 +74,7 @@ function checkAssistantResponse(thread_id, nonce) {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: 'action=check_query_status&thread_id=' + encodeURIComponent(thread_id) +
-                  '&nonce=' + encodeURIComponent(nonce) // Použití aktualizované nonce
+                  '&nonce=' + encodeURIComponent(nonce) 
         })
         .then(response => response.json())
         .then(data => {
@@ -88,8 +88,7 @@ function checkAssistantResponse(thread_id, nonce) {
                     document.getElementById('ekortn-chat-output').innerText += '\nDebug Info: ' + JSON.stringify(data.data.debug);
                 }
 
-                // Vytvoření souhrnné odpovědi
-                compileFinalResponse(thread_id, nonce);
+                // Tady by se mohla volat compileFinalResponse, atd.
             } else if (data.success && data.data.status === 'pending') {
                 // Pokud odpověď ještě není hotová, zopakujeme kontrolu za pár sekund
                 checkAssistantResponse(thread_id, nonce);
@@ -104,39 +103,6 @@ function checkAssistantResponse(thread_id, nonce) {
             document.getElementById('ekortn-chat-output').innerText += '\nError: ' + error.message;
             console.log('Error:', error);
         });
-    }, 3000); // Kontrola každé 3 sekundy
-}
-
-// Funkce pro vytvoření souhrnné odpovědi
-function compileFinalResponse(thread_id, nonce) {
-    fetch('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'action=compile_final_response&thread_id=' + encodeURIComponent(thread_id) +
-              '&nonce=' + encodeURIComponent(nonce) // Použití aktualizované nonce
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Zobrazení souhrnné odpovědi asistenta
-            document.getElementById('ekortn-chat-output').innerText += '\nFinal Response: ' + data.data.final_response;
-
-            // Debug informace, pokud jsou k dispozici
-            if (data.data.debug) {
-                document.getElementById('ekortn-chat-output').innerText += '\nDebug Info: ' + JSON.stringify(data.data.debug);
-            }
-        } else {
-            // Zpracování chybové zprávy
-            let errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data);
-            document.getElementById('ekortn-chat-output').innerText += '\nError: ' + errorMessage;
-            console.log('Detail chyby:', data.data);
-        }
-    })
-    .catch(error => {
-        document.getElementById('ekortn-chat-output').innerText += '\nError: ' + error.message;
-        console.log('Error:', error);
-    });
+    }, 3000);
 }
 </script>
