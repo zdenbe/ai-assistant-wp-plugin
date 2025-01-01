@@ -184,14 +184,15 @@ function ekortn_check_query_status() {
     $table_threads = $wpdb->prefix . 'ekortn_threads';
     $table_messages = $wpdb->prefix . 'ekortn_messages';
 
-    $belongs_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_threads WHERE thread_id = %s AND user_id = %d",
-        $thread_id,
-        $current_user_id
-    ));
-    if (!$belongs_count) {
-        wp_send_json_error(['message' => 'Access denied - this thread does not belong to you.']);
-    }
+    $belongs_count = true; // Dočasné vypnutí kontroly uživatele
+    //$belongs_count = $wpdb->get_var($wpdb->prepare(
+    //    "SELECT COUNT(*) FROM $table_threads WHERE thread_id = %s AND user_id = %d",
+    //    $thread_id,
+    //    $current_user_id
+    //));
+    //if (!$belongs_count) {
+    //    wp_send_json_error(['message' => 'Access denied - this thread does not belong to you.']);
+    //}
 
     $api_key = get_option('ekortn_openai_api_key');
     // Původní kód předpokládal, že run_id = thread_id

@@ -19,26 +19,28 @@ function ekortn_register_settings() {
     register_setting('ekortn_options_group', 'ekortn_token_limit');
 }
 add_action('admin_init', 'ekortn_register_settings');
-add_action('admin_menu', 'ekortn_register_options_page', 9); 
+
+// Vytvoření hlavní stránky Nastavení (v "Settings") a podmenu Zprávy
+add_action('admin_menu', 'ekortn_register_options_page', 9);
 
 function ekortn_register_options_page() {
     // 1) Hlavní stránka - Nastavení EkoRTN Assistenta
     add_options_page(
-        'Nastavení EkoRTN Assistenta',
-        'EkoRTN Assistant',
-        'manage_options',
-        'ekortn',
-        'ekortn_options_page'
+        'Nastavení EkoRTN Assistenta',  // page title
+        'EkoRTN Assistant',            // menu title
+        'manage_options',              // capability
+        'ekortn',                      // slug
+        'ekortn_options_page'          // callback
     );
 
     // 2) Podmenu „Zprávy konverzace“
     add_submenu_page(
-        'options-general.php?page=ekortn', // slug hlavní stránky (ne úplně standard, ale funguje)
-        'Zprávy konverzace',               // page title
-        'Zprávy konverzace',               // menu title
-        'manage_options',                  // capability
-        'ekortn_messages',                 // menu slug
-        'ekortn_render_messages_page'      // callback
+        'options-general.php?page=ekortn', // slug hlavní stránky
+        'Zprávy konverzace',
+        'Zprávy konverzace',
+        'manage_options',
+        'ekortn_messages',
+        'ekortn_render_messages_page'
     );
 }
 
@@ -138,6 +140,7 @@ function ekortn_options_page() {
 
 // ================================================
 // Hlavní funkce vykreslující "Zprávy konverzace"
+// s FILTREM, PAGINACÍ a DETAIL VLÁKNA
 // ================================================
 function ekortn_render_messages_page() {
     if (!current_user_can('manage_options')) {
@@ -147,21 +150,22 @@ function ekortn_render_messages_page() {
     global $wpdb;
     $table_messages = $wpdb->prefix . 'ekortn_messages';
 
-    // Rozhodneme se, zda uživatel chce "detail" vlákna nebo "seznam" všech zpráv
+    // 0) Rozlišení, jestli zobrazujeme detail jedné konverzace
     $view = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'list';
 
     // ============== DETAIL VLÁKNA ==============
     if ($view === 'detail' && !empty($_GET['thread_id'])) {
         $thread_id = sanitize_text_field($_GET['thread_id']);
-
-        // Dotaz na všechny zprávy z daného threadu
+        // Všechny zprávy pro dané thread_id
         $sql = $wpdb->prepare("SELECT * FROM $table_messages WHERE thread_id = %s ORDER BY created_at ASC", $thread_id);
         $results = $wpdb->get_results($sql);
 
         ?>
         <div class="wrap">
-            <h1>Detail konverzace pro Thread: <?php echo esc_html($thread_id); ?></h1>
-            <p><a href="<?php echo esc_url(admin_url('options-general.php?page=ekortn_messages')); ?>">&laquo; Zpět na seznam všech zpráv</a></p>
+            <h1>Detail konverzace (Thread: <?php echo esc_html($thread_id); ?>)</h1>
+            <p>
+                <a href="<?php echo esc_url(admin_url('options-general.php?page=ekortn_messages')); ?>">&laquo; Zpět na seznam všech zpráv</a>
+            </p>
 
             <table class="widefat fixed striped">
                 <thead>
@@ -185,7 +189,7 @@ function ekortn_render_messages_page() {
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="5">Toto vlákno je prázdné nebo neexistuje.</td></tr>
+                    <tr><td colspan="5">Toto vlákno neobsahuje žádné zprávy.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -195,18 +199,17 @@ function ekortn_render_messages_page() {
         return; // Ukončíme vykreslování -> detail se zobrazil
     }
 
-    // ============== SEZNAM VŠECH ZPRÁV (S FILTRY A PAGINACÍ) ==============
-
-    // 1) Zjistíme, zda je vyplněn filtr user_id a thread_id
+    // ============== SEZNAM VŠECH ZPRÁV ==============
+    // 1) Filtry: user_id, fthread
     $filter_user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
     $filter_thread_id = !empty($_GET['fthread']) ? sanitize_text_field($_GET['fthread']) : '';
 
     // 2) Paginace
-    $per_page = 20; // Počet záznamů na stránku
+    $per_page = 20;
     $paged = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
     $offset = ($paged - 1) * $per_page;
 
-    // 3) Sestavíme WHERE podmínky podle filtrů
+    // 3) WHERE klauzule pro filtry
     $where_clauses = [];
     $params = [];
     if ($filter_user_id > 0) {
@@ -217,31 +220,27 @@ function ekortn_render_messages_page() {
         $where_clauses[] = "thread_id = %s";
         $params[] = $filter_thread_id;
     }
-
     $where_sql = '';
     if (!empty($where_clauses)) {
         $where_sql = "WHERE " . implode(" AND ", $where_clauses);
     }
 
-    // 4) Zjistíme CELKOVÝ počet pro paginaci
+    // 4) Spočítáme total count
     $sql_count = "SELECT COUNT(*) FROM $table_messages $where_sql";
     $total_count = $wpdb->get_var($wpdb->prepare($sql_count, $params));
 
-    // 5) Získáme reálné záznamy (s LIMITem a OFFSETem)
+    // 5) Získáme reálné záznamy + seřazení, omezení
     $sql_main = "SELECT * FROM $table_messages $where_sql 
                  ORDER BY created_at DESC 
                  LIMIT %d OFFSET %d";
-    // Musíme sloučit parametry + limit, offset:
     $params_main = array_merge($params, [ $per_page, $offset ]);
-
     $results = $wpdb->get_results($wpdb->prepare($sql_main, $params_main));
 
-    // Vypočítáme počet stránek
+    // Počet stránek
     $total_pages = ceil($total_count / $per_page);
 
-    // Vygenerujeme URL základ (bez paged param)
+    // Vygenerujeme base_url pro stránkování a filtry
     $base_url = admin_url('options-general.php?page=ekortn_messages');
-    // Zachováme filtry v URL
     if ($filter_user_id) {
         $base_url .= '&user_id=' . urlencode($filter_user_id);
     }
@@ -259,8 +258,8 @@ function ekortn_render_messages_page() {
             <table class="form-table">
                 <tr>
                     <th><label for="filter_user_id">User ID:</label></th>
-                    <td><input type="number" name="user_id" id="filter_user_id" 
-                               value="<?php echo esc_attr($filter_user_id); ?>" 
+                    <td><input type="number" name="user_id" id="filter_user_id"
+                               value="<?php echo esc_attr($filter_user_id); ?>"
                                placeholder="Např. 1" /></td>
 
                     <th><label for="filter_thread_id">Thread ID:</label></th>
@@ -275,7 +274,7 @@ function ekortn_render_messages_page() {
 
         <p>Nalezeno <strong><?php echo intval($total_count); ?></strong> záznamů.</p>
 
-        <!-- TABULKA SE ZPRÁVAMI -->
+        <!-- SEZNAM ZPRÁV S ODKAZEM NA DETAIL VLÁKNA -->
         <table class="widefat fixed striped">
             <thead>
                 <tr>
@@ -293,16 +292,16 @@ function ekortn_render_messages_page() {
                     <tr>
                         <td><?php echo esc_html($row->id); ?></td>
                         <td>
-                          <?php echo esc_html($row->thread_id); ?>
-                          <br />
-                          <small>
-                             <a href="<?php echo esc_url(add_query_arg(array(
-                                 'view' => 'detail',
-                                 'thread_id' => $row->thread_id
-                             ), $base_url)); ?>">
+                            <?php echo esc_html($row->thread_id); ?>
+                            <br/>
+                            <small>
+                              <a href="<?php echo esc_url(add_query_arg([
+                                  'view' => 'detail',
+                                  'thread_id' => $row->thread_id
+                              ], $base_url)); ?>">
                                 Detail
-                             </a>
-                          </small>
+                              </a>
+                            </small>
                         </td>
                         <td><?php echo esc_html($row->user_id); ?></td>
                         <td><?php echo esc_html($row->role); ?></td>
@@ -321,7 +320,6 @@ function ekortn_render_messages_page() {
             <div class="tablenav bottom" style="margin-top:20px;">
                 <div class="tablenav-pages">
                 <?php
-                // Jednoduchá stránkovací logika
                 for ($i = 1; $i <= $total_pages; $i++) {
                     $url = add_query_arg('paged', $i, $base_url);
                     $class = ($i == $paged) ? 'page-numbers current' : 'page-numbers';
@@ -335,4 +333,3 @@ function ekortn_render_messages_page() {
     </div>
     <?php
 }
-?>
