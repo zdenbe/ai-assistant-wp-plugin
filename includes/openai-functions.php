@@ -1,4 +1,60 @@
 <?php
+function openai_create_thread_and_run($api_key, $assistant_id, $messages, $debug = false) {
+    $url = "https://api.openai.com/v1/threads/runs";
+    $headers = [
+        "Authorization: Bearer $api_key",
+        "Content-Type: application/json",
+        "OpenAI-Beta: assistants=v2"
+    ];
+
+    $body = [
+        "assistant_id" => $assistant_id,
+        "thread" => [
+            "messages" => $messages
+        ]
+    ];
+
+    if ($debug) {
+        error_log("Request Body: " . json_encode($body));
+    }
+
+    $options = [
+        CURLOPT_URL => $url,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($body),
+        CURLOPT_RETURNTRANSFER => true
+    ];
+
+    $ch = curl_init();
+    curl_setopt_array($ch, $options);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($debug) {
+        error_log("Response: " . $response);
+    }
+
+    if ($http_code !== 200) {
+        return [
+            "error" => "HTTP Error $http_code",
+            "details" => $response
+        ];
+    }
+
+    $decoded_response = json_decode($response, true);
+
+    if (isset($decoded_response['error'])) {
+        return [
+            "error" => $decoded_response['error']['message'],
+            "details" => $decoded_response
+        ];
+    }
+
+    return $decoded_response;
+}
+
 
 if (!function_exists('handle_api_response')) {
     function handle_api_response($response, $debug = false) {
@@ -23,9 +79,10 @@ if (!function_exists('handle_api_response')) {
     }
 }
 
-if (!function_exists('openai_create_thread')) {
-    function openai_create_thread($api_key, $body, $debug = false) {
-        $response = wp_remote_post('https://api.openai.com/v1/threads', array(
+if (!function_exists('openai_create_threadX')) {
+    function openai_create_threadX($api_key, $body, $debug = false) {
+        //$response = wp_remote_post('https://api.openai.com/v1/threads/', array(
+        $response = wp_remote_post('https://api.openai.com/v1/threads/runs', array(
             'method'    => 'POST',
             'headers'   => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -46,6 +103,80 @@ if (!function_exists('openai_create_thread')) {
         return array('error' => isset($response_data['error']) ? $response_data['error'] : 'Unknown error occurred during thread creation.', 'debug' => isset($response_data['debug']) ? $response_data['debug'] : null);
     }
 }
+
+
+
+function openai_create_thread($api_key, $body, $debug = false) {
+    $url = 'https://api.openai.com/v1/threads/runs';
+
+    // Logování těla požadavku
+    if ($debug) {
+        ekortn_log_request("Request Body (pre-send): " . $body, 'info');
+    }
+
+    // Zajištění, že tělo je JSON řetězec
+    if (!is_string($body)) {
+        $body = json_encode($body, JSON_UNESCAPED_UNICODE);
+    }
+
+    $response = wp_remote_post($url, array(
+        'method'    => 'POST',
+        'headers'   => array(
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+            'OpenAI-Beta'   => 'assistants=v2'
+        ),
+        'body'      => $body
+    ));
+
+    // Logování odpovědi
+    if ($debug) {
+        $response_body = wp_remote_retrieve_body($response);
+        ekortn_log_request("Response Body: " . $response_body, 'info');
+    }
+
+    $response_data = handle_api_response($response, $debug);
+
+    // Ověření, zda je přítomné ID vlákna
+    if (isset($response_data['id'])) {
+        return array('success' => true, 'id' => $response_data['id'], 'data' => $response_data);
+    }
+
+    // Vrácení chyby včetně debug informací
+    return array(
+        'error' => $response_data['error'] ?? 'Unknown error occurred during thread creation.',
+        'debug' => $response_data['debug'] ?? null
+    );
+}
+
+
+
+
+if (!function_exists('openai_create_run')) {
+    function openai_create_run($api_key, $thread_id, $body, $debug = false) {
+        $response = wp_remote_post("https://api.openai.com/v1/threads/$thread_id/runs", array(
+            'method'    => 'POST',
+            'headers'   => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json',
+                'OpenAI-Beta'   => 'assistants=v2'
+            ),
+            'body'      => $body
+        ));
+
+        $response_data = handle_api_response($response, $debug);
+
+        // Ověření, zda je přítomné ID vlákna
+        if (isset($response_data['id'])) {
+            return array('success' => true, 'id' => $response_data['id'], 'data' => $response_data);
+        }
+
+        // Vrácení chyby včetně debug informací
+        return array('error' => isset($response_data['error']) ? $response_data['error'] : 'Unknown error occurred during thread creation.', 'debug' => isset($response_data['debug']) ? $response_data['debug'] : null);
+    }
+}
+
+
 
 if (!function_exists('openai_run_assistant')) {
     function openai_run_assistant($api_key, $thread_id, $body, $debug = false) {

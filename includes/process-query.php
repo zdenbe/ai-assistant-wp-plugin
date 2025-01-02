@@ -38,13 +38,15 @@ if (!function_exists('process_query_function')) {
 
         // Zjistíme doporučené asistenty od výchozího asistenta
         $recommendation_body = json_encode(array(
-            'messages' => array(
-                array(
-                    'role' => 'user',
-                    'content' => $query
+            'assistant_id' => $default_assistant_id, // Musí být na nejvyšší úrovni
+            'thread' => array(
+                'messages' => array(
+                    array(
+                        'role' => 'user',
+                        'content' => $query
+                    )
                 )
             ),
-            'assistant_id' => $default_assistant_id,
             'metadata' => array(
                 'user_id' => $current_user_id
             )
@@ -75,7 +77,7 @@ if (!function_exists('process_query_function')) {
         $attempts = 0;
         while ($status != 'completed' && $attempts < 20) {
             sleep(3);
-            $status_data = openai_check_run_status($api_key, $thread_id, $thread_id, $debug);
+            $status_data = openai_check_run_status($api_key, $thread_id, $run_id, $debug);
 
             if (isset($status_data['error'])) {
                 $status_error_log = ekortn_log('Check Run Status Error: ' . $status_data['error'], 'error', $log_output);
